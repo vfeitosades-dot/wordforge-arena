@@ -1,3 +1,13 @@
+# Aurora Breach · FPS com modelos Blender
+
+Novo projeto em [fps/](fps/README.md). Três armas, três operadores, animações esqueléticas próprias, dois mapas, três modos e bots com navegação. Download: aba Actions → **Aurora Breach FPS - Windows** → Artifacts → **Aurora-Breach-Windows**.
+
+![Menu do FPS](fps/docs/menu.png)
+
+As versões anteriores VoxMateria e WordForge continuam preservadas abaixo.
+
+---
+
 # VoxMateria · nova versão Godot offline
 
 O projeto solicitado no novo documento está em [godot/](godot/README.md): FPS voxel, extração de matéria, interpretação composicional sem API paga, física e ENet. Baixe o pacote no workflow **VoxMateria Godot offline - Windows**, na aba [Actions](https://github.com/vfeitosades-dot/wordforge-arena/actions).
