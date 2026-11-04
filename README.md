@@ -1,3 +1,11 @@
+# VoxMateria · nova versão Godot offline
+
+O projeto solicitado no novo documento está em [godot/](godot/README.md): FPS voxel, extração de matéria, interpretação composicional sem API paga, física e ENet. Baixe o pacote no workflow **VoxMateria Godot offline - Windows**, na aba [Actions](https://github.com/vfeitosades-dot/wordforge-arena/actions).
+
+Esta é uma versão vertical funcional. O escopo entregue e o que ainda falta estão documentados no README do Godot. A versão anterior WordForge e seu APK continuam abaixo e no workflow **Compilar jogo**.
+
+---
+
 # ✦ WordForge 3D
 
 Mundo 3D em terceira pessoa, com visual simples de blocos, criações por voz ou texto e multiplayer entre PC e Android.

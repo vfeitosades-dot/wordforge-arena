@@ -1,0 +1,78 @@
+name: VoxMateria Godot offline - Windows
+on:
+  push:
+    branches: [main]
+    paths: ['godot/**', '.github/workflows/godot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  godot-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install offline speech dependencies
+        run: python -m pip install -r godot/voice/requirements.txt
+      - name: Download Godot and Windows export template
+        shell: python
+        run: |
+          import urllib.request,zipfile,pathlib,os
+          base=pathlib.Path('build-tools');base.mkdir(exist_ok=True)
+          release='https://github.com/godotengine/godot/releases/download/4.6.3-stable/'
+          urllib.request.urlretrieve(release+'Godot_v4.6.3-stable_win64.exe.zip',base/'editor.zip')
+          with zipfile.ZipFile(base/'editor.zip') as z:z.extractall(base)
+          urllib.request.urlretrieve(release+'Godot_v4.6.3-stable_export_templates.tpz',base/'templates.tpz')
+          dest=pathlib.Path(os.environ['APPDATA'])/'Godot/export_templates/4.6.3.stable';dest.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(base/'templates.tpz') as z:
+            (dest/'windows_release_x86_64.exe').write_bytes(z.read('templates/windows_release_x86_64.exe'))
+          exe=next(base.glob('*console.exe'),next(base.glob('Godot*.exe')))
+          with open(os.environ['GITHUB_ENV'],'a') as f:f.write('GODOT_EXE='+str(exe.resolve())+'\n')
+      - name: Import and deterministic tests
+        shell: pwsh
+        run: |
+          & $env:GODOT_EXE --headless --path godot --editor --import --quit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $env:GODOT_EXE --headless --path godot --script res://tests/suite.gd
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python godot/tests/network_smoke.py $env:GODOT_EXE
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build Windows game and speech worker
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/VoxMateria/voice | Out-Null
+          & $env:GODOT_EXE --headless --path godot --export-release "Windows Desktop" ../build/VoxMateria/VoxMateria.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m PyInstaller --noconfirm --onefile --name recognizer --collect-all vosk --collect-all _sounddevice_data --distpath build/VoxMateria/voice --workpath build/voice-temp --specpath build godot/voice/recognizer.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item godot/voice/instalar-modelo.ps1 build/VoxMateria/voice/
+          Copy-Item godot/README.md build/VoxMateria/README.md
+          Copy-Item godot/docs/THIRD-PARTY.md build/VoxMateria/
+      - name: Install Portuguese model in downloadable package
+        continue-on-error: true
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build/VoxMateria/voice/instalar-modelo.ps1
+      - name: Verify real exported executable
+        shell: pwsh
+        run: |
+          $p=Start-Process build/VoxMateria/VoxMateria.exe -ArgumentList '--headless','--','--smoke' -Wait -PassThru -RedirectStandardOutput build/exe-smoke.log -RedirectStandardError build/exe-errors.log
+          Get-Content build/exe-smoke.log
+          Get-Content build/exe-errors.log
+          if ($p.ExitCode -ne 0 -or !(Select-String -Path build/exe-smoke.log -Pattern 'VOXMATERIA_EXE_SMOKE_OK' -Quiet)) { throw 'Exported game smoke test failed' }
+          build/VoxMateria/voice/recognizer.exe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoxMateria-Godot-Windows-offline
+          path: build/VoxMateria/
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: VoxMateria-test-report
+          path: |
+            godot/test-results/
+            build/exe-smoke.log
+            build/exe-errors.log

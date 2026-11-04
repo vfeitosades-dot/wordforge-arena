@@ -1,0 +1,5 @@
+.godot/
+models/
+test-results/
+voice/__pycache__/
+*.pyc

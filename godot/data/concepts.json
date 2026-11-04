@@ -1,0 +1,119 @@
+{
+  "robot": [
+    "robo",
+    "robos",
+    "robot"
+  ],
+  "duck": [
+    "pato",
+    "patos",
+    "duck"
+  ],
+  "pigeon": [
+    "pombo",
+    "pombos",
+    "passaro",
+    "passaros",
+    "bird"
+  ],
+  "dog": [
+    "cachorro",
+    "cachorros",
+    "cao",
+    "caes",
+    "dog"
+  ],
+  "cat": [
+    "gato",
+    "gatos",
+    "cat"
+  ],
+  "drone": [
+    "drone",
+    "drones"
+  ],
+  "spider": [
+    "aranha",
+    "aranhas"
+  ],
+  "slime": [
+    "gelatina",
+    "gelatinoso",
+    "gelatinosa",
+    "slime"
+  ],
+  "golem": [
+    "golem",
+    "pedra"
+  ],
+  "ghost": [
+    "fantasma",
+    "fantasmas"
+  ],
+  "cube": [
+    "cubo",
+    "cubos",
+    "bloco",
+    "blocos",
+    "cube"
+  ],
+  "sphere": [
+    "bola",
+    "bolas",
+    "esfera",
+    "esferas",
+    "bolinha",
+    "bolinhas"
+  ],
+  "wall": [
+    "parede",
+    "paredes",
+    "muro",
+    "muros"
+  ],
+  "platform": [
+    "plataforma",
+    "plataformas",
+    "ponte"
+  ],
+  "tower": [
+    "torre",
+    "torres"
+  ],
+  "vehicle": [
+    "carro",
+    "carros",
+    "veiculo",
+    "veiculos"
+  ],
+  "launcher": [
+    "lancador",
+    "lancadores",
+    "emissor",
+    "emissores",
+    "arma",
+    "armas",
+    "pistola"
+  ],
+  "shield": [
+    "escudo",
+    "escudos"
+  ],
+  "portal": [
+    "portal",
+    "portais"
+  ],
+  "gravity": [
+    "buraco negro",
+    "campo gravitacional",
+    "campo de gravidade"
+  ],
+  "jetpack": [
+    "jetpack",
+    "mochila propulsora"
+  ],
+  "tree": [
+    "arvore",
+    "arvores"
+  ]
+}
