@@ -11,8 +11,8 @@ Abra Actions → Aurora Breach FPS - Windows → execução concluída → Artif
 - 3 armas originais: Kestrel (rifle), Wisp (pistola) e Longbow (precisão).
 - 3 operadores androides: Serein, Rook e Vesper, com cores, detalhes, apresentação e habilidades diferentes.
 - Modelos com bevels, materiais, armatures, pesos e clipes importados de GLB. Idle, caminhada, corrida, salto, disparo, recarga, equipar, inspeção e habilidade. Os clipes de origem usam timeline de 24 fps, normalizada por speed_scale 2.5 no runtime para o ritmo pretendido de 60 fps. A recarga move carregador, mãos e mecanismo; não é apenas uma oscilação da câmera.
-- Dois layouts próprios: Marina Solar e Observatório, com coberturas, rotas e marcadores visuais.
-- Confronto (15 eliminações), sobrevivência (3 ondas) e estande de treino.
+- Quatro layouts próprios: Marina Solar, Estação Boreal, Doca Neon e Complexo Verdant, com coberturas, rotas e marcadores visuais.
+- Confronto (15 eliminações), sobrevivência (3 ondas), estande de treino e Ruptura (rodadas de ataque, compra, plantio e desarme).
 - Bots com A* por grade, linha de visão, tempo de reação, memória da última posição vista, perseguição, recuo e recarga. Não recebem posição-alvo através de paredes como informação de combate.
 - Munição por arma, reserva, cancelamento de recarga ao trocar, dispersão ao mover, dano localizado na cabeça, proteção de reaparecimento e habilidades com cooldown.
 - Menu com apresentação 3D, seleção de operador/arma/modo/mapa/dificuldade e ajustes de sensibilidade, FOV, volume, tela cheia e sombras. Resultado com precisão, mortes e headshots.
@@ -43,3 +43,14 @@ Código e recursos próprios: MIT, conforme LICENSE na raiz. Godot: MIT. As pesq
 
 ![Menu real](docs/menu.png)
 ![Partida real](docs/game.png)
+![Modo Ruptura](docs/ruptura.png)
+
+## Atualização Ruptura
+
+Modo tático **solo, atacante contra quatro bots defensores**; não é multiplayer 5v5. Primeiro lado a três rodadas vence. Cada rodada tem 8 segundos de preparação e 90 segundos para atacar. O jogador começa com pistola e 800 créditos, recebe 200 por eliminação e 1000/600 por vitória/derrota de rodada. A loja B vende Kestrel (1000), Longbow (1400) e blindagem (350). Comprar outra arma substitui a primária da rodada; não há reembolso.
+
+Aproxime-se de A ou B, pare e segure G por 2,5 segundos. Soltar ou mover cancela o plantio. Não é possível atirar ou usar habilidade enquanto planta. Após armar, proteja o dispositivo por 35 segundos. Defensores próximos precisam de quatro segundos contínuos para desarmá-lo e interrompem combate durante a interação. Morrer antes de plantar perde a rodada; após plantar, o dispositivo ainda pode vencer. O mapa é mantido e entidades/recursos de rodada são reinicializados corretamente.
+
+O minimapa mostra coberturas, A/B, jogador e somente adversários com linha de visão desobstruída; não revela inimigos através de paredes. Quatro temas têm layouts e materiais próprios: solar, alpino, porto noturno e botânico. As decorações ficam sobre as coberturas; pilares e bordas também são considerados pela grade de navegação.
+
+Foram acrescentados testes de economia, compra bloqueada, dano em blindagem, plantio fora do ponto, cancelamento, desarme interrompido, transição de rodada, vitória por explosão após morte, encerramento da partida, restrição de armas não compradas, bloqueio de disparo/habilidade durante plantio e restauração correta ao sair do menu. Os resultados efetivos estão no workflow e no relatório de testes. Não há validação de multiplayer 5v5 nesta versão.

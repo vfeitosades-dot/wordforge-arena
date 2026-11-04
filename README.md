@@ -1,6 +1,6 @@
 # Aurora Breach · FPS com modelos Blender
 
-Novo projeto em [fps/](fps/README.md). Três armas, três operadores, animações esqueléticas próprias, dois mapas, três modos e bots com navegação. Download: aba Actions → **Aurora Breach FPS - Windows** → Artifacts → **Aurora-Breach-Windows**.
+Novo projeto em [fps/](fps/README.md). Três armas, três operadores, animações esqueléticas próprias, quatro mapas, quatro modos, minimapa e rodadas táticas com plantio e desarme. Download: aba Actions → **Aurora Breach FPS - Windows** → Artifacts → **Aurora-Breach-Windows**.
 
 ![Menu do FPS](fps/docs/menu.png)
 

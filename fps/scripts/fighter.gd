@@ -44,19 +44,23 @@ func damage(amount: float) -> void:
  if hp<=0:active=false;controller.eliminated(self)
 func _physics_process(dt: float) -> void:
  if local or not active or not controller.playing or controller.paused:return
+ if controller.mode==3 and controller.tactical.phase!="live":
+  velocity=Vector3.ZERO;play_clip("idle");return
  var player=controller.player
  if not is_instance_valid(player):return
+ if controller.mode==3 and controller.tactical.planted and position.distance_to(controller.tactical.plant_position)<2.1:
+  play_clip("ability",false);velocity.x=move_toward(velocity.x,0,dt*18);velocity.z=move_toward(velocity.z,0,dt*18);velocity.y-=24*dt;move_and_slide();return
  rethink-=dt;fire_timer-=dt;memory=maxf(0,memory-dt);reload_clock=maxf(0,reload_clock-dt)
  var delta=player.position-position
  var ray=PhysicsRayQueryParameters3D.create(global_position+Vector3.UP*1.55,player.global_position+Vector3.UP*1.2);ray.exclude=[get_rid()]
  var hit=get_world_3d().direct_space_state.intersect_ray(ray)
- var sees=not hit.is_empty() and hit.collider==player and delta.length()<32
+ var sees=player.active and not hit.is_empty() and hit.collider==player and delta.length()<32
  if sees:
   memory=6;last_seen=player.position
   reaction+=dt
   rotation.y=lerp_angle(rotation.y,atan2(-delta.x,-delta.z),dt*7)
   state="retreat" if hp<35 else "engage"
-  if reaction>controller.reaction_time and fire_timer<=0 and reload_clock<=0 and controller.mode!=2:
+  if reaction>controller.reaction_time and fire_timer<=0 and reload_clock<=0 and controller.mode!=2 and not (controller.mode==3 and controller.tactical.planted and position.distance_to(controller.tactical.plant_position)<2.1):
    if rounds<=0:
     reload_clock=1.8;rounds=25;play_clip("reload",false);return
    rounds-=1
@@ -68,7 +72,11 @@ func _physics_process(dt: float) -> void:
  else:reaction=0;state="hunt" if memory>0 else "patrol"
  if rethink<=0:
   rethink=randf_range(.45,.9)
-  if state=="retreat":
+  if controller.mode==3 and controller.tactical.planted and not sees:
+   target_point=controller.tactical.plant_position
+  elif controller.mode==3 and not sees and memory<=0:
+   target_point=controller.tactical.SITES[actor_index%2]+Vector3(randf_range(-2,2),0,randf_range(-2,2))
+  elif state=="retreat":
    var best=position;var score=-INF
    for cover in controller.arena.covers:
     var s=cover.distance_to(player.position)-cover.distance_to(position)*.5
