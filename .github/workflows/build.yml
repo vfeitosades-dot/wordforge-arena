@@ -1,0 +1,41 @@
+name: Compilar jogo
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:win -- --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordForge-Windows
+          path: build/windows/WordForge-3D-Windows.exe
+          retention-days: 90
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build APK
+        run: bash scripts/build-android.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordForge-Android
+          path: build/android/WordForge-3D-Android.apk
+          retention-days: 90
