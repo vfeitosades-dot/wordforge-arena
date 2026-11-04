@@ -28,6 +28,8 @@ jobs:
             (dest/'windows_release_x86_64.exe').write_bytes(z.read('templates/windows_release_x86_64.exe'))
           exe=next(base.glob('*console.exe'),next(base.glob('Godot*.exe')))
           with open(os.environ['GITHUB_ENV'],'a') as f:f.write('GODOT_EXE='+str(exe.resolve())+'\n')
+      - name: Restore verified Blender models
+        run: python fps/art/prepare_assets.py
       - name: Import and test models, animation and gameplay
         shell: pwsh
         run: |
@@ -59,3 +61,7 @@ jobs:
             fps-tests.log
             exe.log
             exe-errors.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aurora-Blender-Source
+          path: fps/art/Aurora_Source.blend.zip

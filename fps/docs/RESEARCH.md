@@ -16,6 +16,6 @@ Hierarquia, simplificação visual e apresentação do jogador. Aplicação pró
 
 4. Riot Games — Beginner's Guide
 https://playvalorant.com/en-us/news/announcements/beginners-guide/
-Referência de estrutura de partida, arsenal e controles. Aurora Breach não usa regras, personagens ou mapas copiados; é uma experiência solo com três modos próprios e escopo menor.
+Referência de estrutura de partida, arsenal e controles. Aurora Breach não usa regras, personagens ou mapas copiados; é uma experiência solo com quatro modos próprios e escopo menor.
 
 Pesquisa visual: menus de coleção, screenshots de mapas e agentes e materiais oficiais encontrados por busca de imagens. Os modelos efetivamente entregues foram construídos no Blender, por código, sem extração de recursos dos jogos pesquisados.

@@ -1,0 +1,52 @@
+{
+  "models": [
+    {
+      "path": "assets/Serein.glb",
+      "packed": "assets/packed/Serein.glb.gz",
+      "sha256": "a643be3945b33c053d58d5303258c944345e42636ce66cb4cefe233d6da3c3a1"
+    },
+    {
+      "path": "assets/Rook.glb",
+      "packed": "assets/packed/Rook.glb.gz",
+      "sha256": "81ad95c96b7ca562b17c60add00d10470ba7fdd82803d961e16a05f2c10f8b68"
+    },
+    {
+      "path": "assets/Vesper.glb",
+      "packed": "assets/packed/Vesper.glb.gz",
+      "sha256": "bd0963fa772927d475d9b0c23085d9c6bea4fb1eaab983a537e2d1f9a27946e4"
+    },
+    {
+      "path": "assets/Lumen.glb",
+      "packed": "assets/packed/Lumen.glb.gz",
+      "sha256": "70cc7d8460bf5197f57a5d2ec330c8c6e2b65ecbf10d5bbdb27feb603ce8b84b"
+    },
+    {
+      "path": "assets/KestrelWorld.glb",
+      "packed": "assets/packed/KestrelWorld.glb.gz",
+      "sha256": "9f0b1c26c54b73e5bfd89b16cd33f33daf98c69d53486a97d8dcd7dac8173621"
+    },
+    {
+      "path": "assets/WispWorld.glb",
+      "packed": "assets/packed/WispWorld.glb.gz",
+      "sha256": "aa6d9591ebcae2ef99eddc4a863515014e645898c468a229fa442775cfb05019"
+    },
+    {
+      "path": "assets/LongbowWorld.glb",
+      "packed": "assets/packed/LongbowWorld.glb.gz",
+      "sha256": "c0a26d3fe66d97c550912a97c6a4110f984abbf1d181844f33fa3040a074bffe"
+    }
+  ],
+  "source_zip": {
+    "parts": [
+      "art/source-parts/Aurora_Source.blend.zip.000",
+      "art/source-parts/Aurora_Source.blend.zip.001",
+      "art/source-parts/Aurora_Source.blend.zip.002",
+      "art/source-parts/Aurora_Source.blend.zip.003",
+      "art/source-parts/Aurora_Source.blend.zip.004",
+      "art/source-parts/Aurora_Source.blend.zip.005",
+      "art/source-parts/Aurora_Source.blend.zip.006",
+      "art/source-parts/Aurora_Source.blend.zip.007"
+    ],
+    "sha256": "e8caf9fb0cce33688a4d01dcc3e524620e01557ae3d55774d794e5819dca64e9"
+  }
+}

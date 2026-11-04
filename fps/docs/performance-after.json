@@ -1,0 +1,15 @@
+{
+  "average_fps": 7.50928805065766,
+  "draw_calls": 858.0,
+  "frames": 180,
+  "mean_frame_ms": 133.168416666667,
+  "one_percent_low_fps": 3.32271173149831,
+  "primitives": 103828.0,
+  "renderer": "OpenGL llvmpipe software; not reference GPU",
+  "resolution": [
+    1280,
+    720
+  ],
+  "static_memory_bytes": 49936410.0,
+  "video_memory_reported_bytes": 24442479.0
+}

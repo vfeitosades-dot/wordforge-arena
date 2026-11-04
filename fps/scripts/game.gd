@@ -4,7 +4,7 @@ const Tactical=preload("res://scripts/tactical.gd")
 const Minimap=preload("res://scripts/minimap.gd")
 const Fighter=preload("res://scripts/fighter.gd")
 const GUNS=[{"name":"KESTREL / AR-7","model":"Kestrel","mag":25,"rate":.12,"damage":32.0,"reload":1.8},{"name":"WISP / P-9","model":"Wisp","mag":12,"rate":.24,"damage":28.0,"reload":1.8},{"name":"LONGBOW / MR-3","model":"Longbow","mag":8,"rate":.75,"damage":70.0,"reload":1.8}]
-const AGENTS=[{"name":"SEREIN","role":"SUPORTE","color":"#79dec2","skill":"Pulso restaurador · recupera 35 de vida"},{"name":"ROOK","role":"SENTINELA","color":"#f59c76","skill":"Blindagem · reduz dano por 5 segundos"},{"name":"VESPER","role":"VANGUARDA","color":"#b7a1f0","skill":"Impulso · avanco rapido na direcao da camera"}]
+const AGENTS=[{"name":"SEREIN","role":"SUPORTE","color":"#79dec2","skill":"Pulso restaurador · recupera 35 de vida"},{"name":"ROOK","role":"SENTINELA","color":"#f59c76","skill":"Blindagem · reduz dano por 5 segundos"},{"name":"VESPER","role":"VANGUARDA","color":"#b7a1f0","skill":"Impulso · avanco rapido na direcao da camera"},{"name":"LUMEN","role":"RECONHECIMENTO","color":"#e5c460","skill":"Pulso de rastreio · revela contatos por 5 segundos"}]
 var arena
 var player
 var camera: Camera3D
@@ -34,6 +34,7 @@ var action_time=0.0
 var ammo=[25,12,8]
 var reserve=[150,96,48]
 var enemies=[]
+var pending_respawns=[]
 var kills=0
 var deaths=0
 var shots=0
@@ -65,6 +66,26 @@ var hitmarker: Label
 var hit_time=0.0
 var settings=ConfigFile.new()
 var title_card: Label
+var menu_background: ColorRect
+var menu_content: VBoxContainer
+var stamp_label: Label
+var minimap_control: Control
+var footer_label: Label
+var hud_plates=[]
+var master_volume=.8
+var reduce_motion=false
+var left_handed=false
+var cross_color=0
+var shadows=true
+var radar_time=0.0
+var hitfeed: Label
+var toast_time=0.0
+var settings_sensitivity: HSlider
+var settings_fov: HSlider
+var settings_volume: HSlider
+var settings_reduced: CheckButton
+var settings_left: CheckButton
+var settings_colors: OptionButton
 var tactical=Tactical.new()
 var objective_label: Label
 var buy_panel: PanelContainer
@@ -74,13 +95,16 @@ var lighting: WorldEnvironment
 var beep_clock=0.0
 func _ready() -> void:
  randomize();settings.load("user://aurora.cfg");sensitivity=settings.get_value("controls","sensitivity",.0022);fov=settings.get_value("controls","fov",78.0)
+ master_volume=settings.get_value("audio","volume",.8);reduce_motion=settings.get_value("accessibility","reduce_motion",false);left_handed=settings.get_value("controls","left_handed",false);cross_color=settings.get_value("accessibility","cross_color",0);shadows=settings.get_value("video","shadows",true)
+ AudioServer.set_bus_volume_db(0,linear_to_db(maxf(.001,master_volume)))
  var environment=WorldEnvironment.new();lighting=environment;var env=Environment.new();env.background_mode=Environment.BG_COLOR;env.background_color=Color("b7c9db");env.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;env.ambient_light_color=Color("d1e1f3");env.ambient_light_energy=.16;env.tonemap_mode=Environment.TONE_MAPPER_FILMIC;env.tonemap_exposure=.9;environment.environment=env;add_child(environment)
- var sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-48,-35,0);sun.light_energy=.45;sun.shadow_enabled=true;sun.name="Sun";add_child(sun)
+ var sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-48,-35,0);sun.light_energy=.45;sun.shadow_enabled=shadows;sun.name="Sun";add_child(sun)
  arena=Arena.new();add_child(arena);arena.build(0)
  var studio=Arena.new();add_child(studio)
  studio.box(Vector3(-55,-.1,0),Vector3(14,.2,14),Color("243e50"))
  studio.box(Vector3(-55,3,-4),Vector3(14,7,.3),Color("20364a"))
  for x in [-58,-52]:studio.box(Vector3(x,2,-3.8),Vector3(.08,4,.08),Color("63af9c"),false)
+ var studio_fill=OmniLight3D.new();studio_fill.position=Vector3(-53,3,3);studio_fill.omni_range=10;studio_fill.light_energy=1.6;studio_fill.light_color=Color("d9edff");add_child(studio_fill)
  menu_camera=Camera3D.new();menu_camera.position=Vector3(4,1.6,5);menu_camera.current=true;menu_camera.fov=48;add_child(menu_camera)
  _ui();_preview(false)
  if "--smoke" in OS.get_cmdline_user_args():
@@ -100,10 +124,10 @@ func option(title: String,items: Array,parent: Node) -> OptionButton:
 func _ui() -> void:
  var canvas=CanvasLayer.new();add_child(canvas)
  menu_root=Control.new();menu_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);canvas.add_child(menu_root)
- var dark=ColorRect.new();dark.color=Color(.035,.065,.095,.96);dark.size=Vector2(565,720);menu_root.add_child(dark)
- var content=VBoxContainer.new();content.position=Vector2(44,22);content.size=Vector2(465,650);content.add_theme_constant_override("separation",6);menu_root.add_child(content)
+ var dark=ColorRect.new();dark.color=Color(.035,.065,.095,.96);dark.size=Vector2(565,720);menu_background=dark;menu_root.add_child(dark)
+ var content=VBoxContainer.new();content.position=Vector2(44,22);content.size=Vector2(465,650);content.add_theme_constant_override("separation",6);menu_root.add_child(content);menu_content=content
  label("A / B     AURORA DIVISION",12,Color("79dec2"),content)
- title_card=label("AURORA\nBREACH",48,Color("edf4f5"),content)
+ title_card=label("AURORA\nBREACH",46,Color("edf4f5"),content)
  label("CONTROLE O ESPACO. ESCOLHA SEU RITMO.",10,Color("9db7c4"),content)
  var nav=HBoxContainer.new();content.add_child(nav)
  button("OPERADORES",func():_preview(false),nav);button("ARSENAL",func():_preview(true),nav);button("AJUSTES",func():settings_panel.visible=not settings_panel.visible,nav)
@@ -111,33 +135,37 @@ func _ui() -> void:
  var row=HBoxContainer.new();content.add_child(row)
  var a=VBoxContainer.new();a.custom_minimum_size.x=226;row.add_child(a);var b=VBoxContainer.new();b.custom_minimum_size.x=226;row.add_child(b)
  map_box=option("ARENA",["Marina solar","Estacao boreal","Doca neon","Complexo verdant"],a);diff_box=option("BOTS",["Facil","Normal","Dificil"],b);diff_box.select(1)
- agent_box=option("OPERADOR",["Serein / suporte","Rook / sentinela","Vesper / vanguarda"],content);agent_box.item_selected.connect(func(i):agents=i;_preview(false))
+ agent_box=option("OPERADOR",["Serein / suporte","Rook / sentinela","Vesper / vanguarda","Lumen / reconhecimento"],content);agent_box.item_selected.connect(func(i):agents=i;_preview(false))
  gun_box=option("EQUIPAMENTO INICIAL",["Kestrel · rifle","Wisp · pistola","Longbow · precisao"],content);gun_box.item_selected.connect(func(i):gun=i;_preview(true))
  agent_desc=label("",12,Color("b4cbd5"),content)
  button("ENTRAR NA ARENA     →",start_match,content,true)
  var bottom=HBoxContainer.new();content.add_child(bottom);button("CONTINUAR",resume,bottom);button("SAIR",func():get_tree().quit(),bottom)
  label("WASD mover · mouse mirar · R recarregar · E habilidade\n1/2/3 trocar · F inspecionar · Espaco pular · Esc menu",11,Color("819eae"),content)
- var stamp=label("OPERACAO / 01\n\nRECURSOS ORIGINAIS\nMODELADOS NO BLENDER",12,Color("f0f5f7"),menu_root);stamp.position=Vector2(1020,40)
+ var stamp=label("OPERACAO / 01\n\nRECURSOS ORIGINAIS\nMODELADOS NO BLENDER",12,Color("f0f5f7"),menu_root);stamp.position=Vector2(1020,40);stamp_label=stamp
  tip=label("SEREIN\nSUPORTE / AURORA DIVISION",24,Color("eaf4f5"),menu_root);tip.position=Vector2(710,570)
  settings_panel=PanelContainer.new();settings_panel.position=Vector2(580,100);settings_panel.custom_minimum_size=Vector2(400,0);settings_panel.add_theme_stylebox_override("panel",style(Color("102431")));settings_panel.visible=false;menu_root.add_child(settings_panel)
  var sc=VBoxContainer.new();sc.add_theme_constant_override("separation",14);settings_panel.add_child(sc);label("CONFIGURACOES",25,Color.WHITE,sc)
- label("Sensibilidade do mouse",13,Color.WHITE,sc);var s=HSlider.new();s.min_value=.0006;s.max_value=.006;s.step=.0001;s.value=sensitivity;s.value_changed.connect(func(v):sensitivity=v;_save());sc.add_child(s)
- label("Campo de visao",13,Color.WHITE,sc);var f=HSlider.new();f.min_value=65;f.max_value=100;f.value=fov;f.value_changed.connect(func(v):fov=v;if_camera_fov();_save());sc.add_child(f)
- label("Volume",13,Color.WHITE,sc);var volume=HSlider.new();volume.min_value=0;volume.max_value=1;volume.step=.05;volume.value=1;volume.value_changed.connect(func(v):AudioServer.set_bus_volume_db(0,linear_to_db(maxf(.001,v))));sc.add_child(volume)
+ label("Sensibilidade do mouse",13,Color.WHITE,sc);var s=HSlider.new();s.min_value=.0006;s.max_value=.006;s.step=.0001;s.value=sensitivity;s.value_changed.connect(func(v):sensitivity=v;_save());sc.add_child(s);settings_sensitivity=s
+ label("Campo de visao",13,Color.WHITE,sc);var f=HSlider.new();f.min_value=65;f.max_value=100;f.value=fov;f.value_changed.connect(func(v):fov=v;if_camera_fov();_save());sc.add_child(f);settings_fov=f
+ label("Volume",13,Color.WHITE,sc);var volume=HSlider.new();volume.min_value=0;volume.max_value=1;volume.step=.05;volume.value=master_volume;volume.value_changed.connect(func(v):master_volume=v;AudioServer.set_bus_volume_db(0,linear_to_db(maxf(.001,v)));_save());sc.add_child(volume);settings_volume=volume
  button("Alternar tela cheia",func():DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN else DisplayServer.WINDOW_MODE_FULLSCREEN),sc)
- button("Sombras: alternar",func():get_node("Sun").shadow_enabled=not get_node("Sun").shadow_enabled,sc)
+ button("Sombras: alternar",func():shadows=not shadows;get_node("Sun").shadow_enabled=shadows;_save(),sc)
+ var reduced=CheckButton.new();reduced.text="Reduzir movimento de camera";reduced.button_pressed=reduce_motion;reduced.toggled.connect(func(v):reduce_motion=v;_save());sc.add_child(reduced);settings_reduced=reduced
+ var left=CheckButton.new();left.text="Arma na esquerda";left.button_pressed=left_handed;left.toggled.connect(func(v):left_handed=v;_save());sc.add_child(left);settings_left=left
+ var colors=option("COR DA MIRA",["Menta","Ambar","Violeta"],sc);settings_colors=colors;colors.select(cross_color);colors.item_selected.connect(func(i):cross_color=i;_cross_style();_save())
+ button("Restaurar padroes",_reset_settings,sc)
  button("Fechar",func():settings_panel.hide(),sc)
  hud=Control.new();hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.mouse_filter=Control.MOUSE_FILTER_IGNORE;hud.visible=false;canvas.add_child(hud)
  for rect in [Rect2(20,620,330,80),Rect2(935,620,330,80),Rect2(20,15,480,78)]:
-  var bg=ColorRect.new();bg.position=rect.position;bg.size=rect.size;bg.color=Color(.025,.06,.085,.85);hud.add_child(bg)
+  var bg=ColorRect.new();bg.position=rect.position;bg.size=rect.size;bg.color=Color(.025,.06,.085,.85);hud.add_child(bg);hud_plates.append(bg)
  hud_text=label("",22,Color("e6f4f0"),hud);hud_text.position=Vector2(32,640)
  ammo_label=label("",28,Color("e6f4f0"),hud);ammo_label.position=Vector2(960,630)
  match_label=label("",19,Color.WHITE,hud);match_label.position=Vector2(32,24)
  notice=label("",19,Color("79dec2"),hud);notice.position=Vector2(450,90)
  cross=label("+",30,Color("95f4dc"),hud);cross.position=Vector2(630,339)
  hitmarker=label("×",36,Color("ffe0af"),hud);hitmarker.position=Vector2(628,336);hitmarker.visible=false
- label("R RECARGA / E HABILIDADE / G PLANTAR / B COMPRAR / ESC MENU",10,Color("c4d5dc"),hud).position=Vector2(390,688)
- var minimap=Minimap.new();minimap.game=self;minimap.position=Vector2(1048,18);minimap.size=Vector2(200,200);minimap.mouse_filter=Control.MOUSE_FILTER_IGNORE;hud.add_child(minimap)
+ footer_label=label("R RECARGA / E HABILIDADE / G PLANTAR / B COMPRAR / ESC MENU",10,Color("c4d5dc"),hud)
+ var minimap=Minimap.new();minimap_control=minimap;minimap.game=self;minimap.position=Vector2(1048,18);minimap.size=Vector2(200,200);minimap.mouse_filter=Control.MOUSE_FILTER_IGNORE;hud.add_child(minimap)
  objective_label=label("",16,Color("ffe2a6"),hud);objective_label.position=Vector2(350,123)
  buy_panel=PanelContainer.new();buy_panel.position=Vector2(830,245);buy_panel.custom_minimum_size=Vector2(400,0);buy_panel.add_theme_stylebox_override("panel",style(Color("102431")));buy_panel.hide();hud.add_child(buy_panel)
  var buy_content=VBoxContainer.new();buy_content.add_theme_constant_override("separation",10);buy_panel.add_child(buy_content)
@@ -147,13 +175,32 @@ func _ui() -> void:
  button("LONGBOW / 1400 creditos",func():_purchase("marksman"),buy_content)
  button("BLINDAGEM / 350 creditos",func():_purchase("armor"),buy_content)
  button("Fechar / B",func():buy_panel.hide();Input.mouse_mode=Input.MOUSE_MODE_CAPTURED,buy_content)
+ hitfeed=label("",14,Color("edbda3"),hud);hitfeed.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT;hitfeed.custom_minimum_size=Vector2(280,70)
+ _cross_style();get_viewport().size_changed.connect(_layout_ui);call_deferred("_layout_ui")
+func _cross_style() -> void:
+ if cross:cross.add_theme_color_override("font_color",[Color("95f4dc"),Color("ffe3a0"),Color("d9beff")][cross_color])
+func _layout_ui() -> void:
+ var extent=get_viewport().get_visible_rect().size
+ var w=extent.x;var h=extent.y;var side=clampf(w*.44,550,650)
+ menu_background.size=Vector2(side,h);menu_content.size=Vector2(side-88,h-44)
+ stamp_label.position=Vector2(w-260,40);tip.position=Vector2(w*.56,h*.79)
+ settings_panel.position=Vector2(side+15,40)
+ minimap_control.position=Vector2(w-232,18);ammo_label.position=Vector2(w-320,h-112);hud_text.position=Vector2(32,h-80)
+ hud_plates[0].position=Vector2(20,h-100);hud_plates[1].position=Vector2(w-345,h-124);hud_plates[1].size.y=104
+ footer_label.position=Vector2(w*.5-280,h-22);cross.position=Vector2(w*.5-10,h*.5-20);hitmarker.position=Vector2(w*.5-12,h*.5-24)
+ notice.position=Vector2(w*.5-250,93);objective_label.position=Vector2(w*.5-290,125)
+ buy_panel.position=Vector2(w-450,h*.34);hitfeed.position=Vector2(w-312,230)
+func _reset_settings() -> void:
+ sensitivity=.0022;fov=78;master_volume=.8;reduce_motion=false;left_handed=false;cross_color=0;shadows=true
+ settings_sensitivity.value=sensitivity;settings_fov.value=fov;settings_volume.value=master_volume;settings_reduced.button_pressed=false;settings_left.button_pressed=false;settings_colors.select(0)
+ get_node("Sun").shadow_enabled=shadows;AudioServer.set_bus_volume_db(0,linear_to_db(master_volume));_cross_style();if_camera_fov();_save()
 func if_camera_fov() -> void:
  if is_instance_valid(camera):camera.fov=fov
 func _save() -> void:
- settings.set_value("controls","sensitivity",sensitivity);settings.set_value("controls","fov",fov);settings.save("user://aurora.cfg")
+ settings.set_value("controls","sensitivity",sensitivity);settings.set_value("controls","fov",fov);settings.set_value("audio","volume",master_volume);settings.set_value("accessibility","reduce_motion",reduce_motion);settings.set_value("controls","left_handed",left_handed);settings.set_value("accessibility","cross_color",cross_color);settings.set_value("video","shadows",shadows);settings.save("user://aurora.cfg")
 func _preview(is_gun: bool) -> void:
  if is_instance_valid(showcase):remove_child(showcase);showcase.queue_free()
- var asset=GUNS[gun].model if is_gun else ["Serein","Rook","Vesper"][agents]
+ var asset=GUNS[gun].model if is_gun else ["Serein","Rook","Vesper","Lumen"][agents]
  showcase=load("res://assets/"+asset+".glb").instantiate();add_child(showcase);showcase.position=Vector3(-55.0,0,0);showcase.rotation.y=PI+.25
  if is_gun:showcase.position.y=1.1;showcase.scale=Vector3.ONE*2.2
  var finder=Fighter.new();showcase_anim=finder.find_anim(showcase);finder.free()
@@ -176,12 +223,12 @@ func _preview_idle(_name: String) -> void:
 func start_match() -> void:
  for e in enemies:
   if is_instance_valid(e):e.queue_free()
- enemies.clear()
+ enemies.clear();pending_respawns.clear()
  if is_instance_valid(player):player.queue_free()
  if is_instance_valid(arena):remove_child(arena);arena.queue_free()
  arena=Arena.new();add_child(arena);map_index=map_box.selected;arena.build(map_index);_map_lighting()
  mode=mode_box.selected;difficulty=diff_box.selected;reaction_time=[.8,.45,.26][difficulty];bot_spread=[.12,.06,.025][difficulty]
- kills=0;deaths=0;shots=0;hits=0;headshots=0;wave=1;clock=0;skill_cd=0;shield_time=0;invulnerable=2
+ title_card.text="AURORA\nBREACH";radar_time=0;hitfeed.text="";kills=0;deaths=0;shots=0;hits=0;headshots=0;wave=1;clock=0;skill_cd=0;shield_time=0;invulnerable=2
  ammo=[25,12,8];reserve=[150,96,48];reload_time=0;cooldown=0;action_time=0
  player=Fighter.new();player.setup(self,true,agents);add_child(player);player.position=Vector3(-6,.05,20)
  camera=Camera3D.new();camera.position.y=1.6;camera.fov=fov;player.add_child(camera);camera.current=true
@@ -193,7 +240,7 @@ func start_match() -> void:
  if is_instance_valid(objective_model):objective_model.queue_free()
  if mode==3:tactical.start();_tactical_round()
 func _spawn_bot() -> void:
- var bot=Fighter.new();bot.setup(self,false,randi()%3);add_child(bot)
+ var bot=Fighter.new();bot.setup(self,false,randi()%4);add_child(bot)
  for i in range(100):
   bot.position=arena.spawn()
   if bot.position.distance_to(player.position)>10:break
@@ -240,6 +287,7 @@ func _skill() -> void:
  skill_cd=18;_clip("ability");_tone(700,.2,.12)
  if agents==0:player.hp=minf(100,player.hp+35);notice.text="PULSO RESTAURADOR"
  if agents==1:shield_time=5;notice.text="BLINDAGEM ATIVA · 5s"
+ if agents==3:radar_time=5;notice.text="PULSO / CONTATOS REVELADOS POR 5s"
  if agents==2:
   var dir=-camera.global_transform.basis.z;dir.y=0;player.velocity+=dir.normalized()*18;notice.text="IMPULSO"
 func _physics_process(dt: float) -> void:
@@ -247,7 +295,12 @@ func _physics_process(dt: float) -> void:
  if mode==3:
   _tactical_step(dt)
   if not playing:return
- clock+=dt;cooldown=maxf(0,cooldown-dt);action_time=maxf(0,action_time-dt);skill_cd=maxf(0,skill_cd-dt);shield_time=maxf(0,shield_time-dt);invulnerable=maxf(0,invulnerable-dt);hit_time=maxf(0,hit_time-dt)
+ for i in range(pending_respawns.size()-1,-1,-1):
+  pending_respawns[i]-=dt
+  if pending_respawns[i]<=0:pending_respawns.remove_at(i);_spawn_bot()
+ clock+=dt;radar_time=maxf(0,radar_time-dt);toast_time=maxf(0,toast_time-dt)
+ if toast_time<=0:hitfeed.text=""
+ cooldown=maxf(0,cooldown-dt);action_time=maxf(0,action_time-dt);skill_cd=maxf(0,skill_cd-dt);shield_time=maxf(0,shield_time-dt);invulnerable=maxf(0,invulnerable-dt);hit_time=maxf(0,hit_time-dt)
  if reload_time>0:
   reload_time-=dt
   if reload_time<=0:
@@ -261,8 +314,9 @@ func _physics_process(dt: float) -> void:
  player.move_and_slide();camera.position.y=lerpf(camera.position.y,1.1 if crouch else 1.6,dt*12)
  camera.fov=lerpf(camera.fov,fov-18 if ads else fov,dt*12)
  recoil=move_toward(recoil,0,dt*1.4)
- var sway=sin(clock*(12 if sprint else 9))*movement.length()
- view.position=view.position.lerp(Vector3(.24 if not ads else .03,-.26+sway*.008,-.65),minf(1,dt*12))
+ var sway=sin(clock*(12 if sprint else 9))*movement.length()*(.25 if reduce_motion else 1)
+ view.scale.x=-1 if left_handed else 1
+ view.position=view.position.lerp(Vector3((.24 if not ads else .03)*(-1 if left_handed else 1),-.26+sway*.008,-.65),minf(1,dt*12))
  if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and cooldown<=0 and reload_time<=0 and action_time<=.05:_fire()
  elif action_time<=0 and not weapon_anim.is_playing():_clip("idle",true)
  hitmarker.visible=hit_time>0
@@ -272,7 +326,7 @@ func _physics_process(dt: float) -> void:
 func _fire() -> void:
  if not player.active or mode==3 and (tactical.phase!="live" or tactical.plant_progress>0):return
  if ammo[gun]<=0:_reload();return
- ammo[gun]-=1;shots+=1;cooldown=GUNS[gun].rate;_clip("fire");recoil+=.014 if gun!=2 else .035;_tone([100,170,65][gun],.09,.2)
+ ammo[gun]-=1;shots+=1;cooldown=GUNS[gun].rate;_clip("fire");recoil+=(.014 if gun!=2 else .035)*(.35 if reduce_motion else 1);_tone([100,170,65][gun],.09,.2)
  var origin=camera.global_position;var direction=-camera.global_transform.basis.z
  var spread=.0015+Vector2(player.velocity.x,player.velocity.z).length()*.003
  direction=(direction+Vector3(randf_range(-spread,spread),randf_range(-spread,spread),randf_range(-spread,spread))).normalized()
@@ -283,7 +337,7 @@ func _fire() -> void:
    hits+=1;hit_time=.15;var head=hit.position.y-hit.collider.global_position.y>1.45
    if head:headshots+=1
    hit.collider.damage(GUNS[gun].damage*(2.4 if head else 1));_tone(900,.025,.07)
- _tracer(camera.global_position+camera.global_transform.basis*Vector3(.2,-.15,-.8),target,Color("ffdca8"))
+ _tracer(camera.global_position+camera.global_transform.basis*Vector3(-.2 if left_handed else .2,-.15,-.8),target,Color("ffdca8"))
 func bot_shot(bot: Node,direction: Vector3) -> void:
  if mode==2:return
  var origin=bot.global_position+Vector3.UP*1.45;var ray=PhysicsRayQueryParameters3D.create(origin,origin+direction*70);ray.exclude=[bot.get_rid()];var hit=get_world_3d().direct_space_state.intersect_ray(ray);var target=origin+direction*40
@@ -297,22 +351,20 @@ func eliminated(victim: Node) -> void:
   if mode==3:return
   if mode==1:_end("OPERACAO ENCERRADA");return
   player.hp=100;player.active=true;player.position=arena.spawn();invulnerable=2;notice.text="REAPARECEU · 2s DE PROTECAO";return
- kills+=1;enemies.erase(victim);victim.queue_free();notice.text="ELIMINACAO CONFIRMADA"
+ kills+=1;hitfeed.text="VOCE  ›  "+AGENTS[victim.actor_index].name+"  /  "+GUNS[gun].model;toast_time=3.5;enemies.erase(victim);victim.collision_layer=0;victim.collision_mask=0;victim.play_clip("death",false);get_tree().create_timer(1.4).timeout.connect(func():if is_instance_valid(victim):victim.queue_free());notice.text="ELIMINACAO CONFIRMADA"
  if mode==0:
   if kills>=15:_end("VITORIA / CONFRONTO")
-  else:get_tree().create_timer(1.3).timeout.connect(func():if_spawn())
+  else:pending_respawns.append(1.3)
  elif mode==1 and enemies.is_empty():
   wave+=1
   if wave>3:_end("VITORIA / SOBREVIVENCIA")
   else:
    player.hp=minf(100,player.hp+25);reserve=[150,96,48];notice.text="ONDA %d / 3" % wave
    for i in 2+wave:_spawn_bot()
- elif mode==2:get_tree().create_timer(1).timeout.connect(func():if_spawn())
+ elif mode==2:pending_respawns.append(1.0)
  elif mode==3:
   tactical.cash+=200
   if enemies.is_empty():tactical.finish(true,"Defensores eliminados")
-func if_spawn() -> void:
- if playing and not paused:_spawn_bot()
 func _end(text: String) -> void:
  playing=false;paused=false;menu_root.show();hud.hide();menu_camera.current=true;showcase.show();Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
  title_card.text="FIM DA\nOPERACAO";tip.text=text+"\n%d eliminacoes · %d mortes\nPrecisao %d%% · %d headshots" % [kills,deaths,100*hits/maxi(1,shots),headshots]
@@ -336,6 +388,7 @@ func _exit_tree() -> void:
 
 func visible_enemy(bot: Node) -> bool:
  if not is_instance_valid(player) or not is_instance_valid(camera):return false
+ if radar_time>0:return true
  var q=PhysicsRayQueryParameters3D.create(camera.global_position,bot.global_position+Vector3.UP*1.2);q.exclude=[player.get_rid()]
  var hit=get_world_3d().direct_space_state.intersect_ray(q)
  return not hit.is_empty() and hit.collider==bot

@@ -2,3 +2,12 @@
 art/*.log
 art/*.blend
 art/*.blend1
+
+# Restored by art/prepare_assets.py from verified packed assets.
+/assets/Serein.glb
+/assets/Rook.glb
+/assets/Vesper.glb
+/assets/Lumen.glb
+/assets/*World.glb
+/art/Aurora_Source.blend.zip
+/art/characters-preview.png

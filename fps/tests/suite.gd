@@ -12,7 +12,7 @@ func all_nodes(root: Node,kind: String) -> Array:
  return result
 func run() -> void:
  seed(1234)
- for asset in ["Kestrel","Wisp","Longbow","Serein","Rook","Vesper"]:
+ for asset in ["Kestrel","Wisp","Longbow","Serein","Rook","Vesper","Lumen"]:
   var model=load("res://assets/"+asset+".glb").instantiate();root.add_child(model)
   var anims=all_nodes(model,"AnimationPlayer");check(not anims.is_empty(),asset+" imported animation player")
   var skeletons=all_nodes(model,"Skeleton3D");check(not skeletons.is_empty(),asset+" skeletal rig")
@@ -23,10 +23,17 @@ func run() -> void:
     for name in ap.get_animation_list():
      if name.ends_with(clip):found=true;check(ap.get_animation(name).get_track_count()>0,asset+" "+clip+" actual tracks")
     check(found,asset+" has "+clip)
+  if asset in ["Serein","Rook","Vesper","Lumen"]:
+   for clip in ["aim","strafe_left","strafe_right","walk_back","crouch_idle","crouch_walk","hit","death"]:
+    var found=false
+    for name in anims[0].get_animation_list():
+     if name.ends_with(clip):found=true
+    check(found,asset+" directional and reaction clip "+clip)
+   check(skeletons[0].get_bone_parent(skeletons[0].find_bone("forearm_r"))==skeletons[0].find_bone("arm_r"),asset+" articulated elbow chain")
   if not anims.is_empty() and not skeletons.is_empty():
    var ap=anims[0];var skeleton=skeletons[0]
    var clip="reload" if asset in ["Kestrel","Wisp","Longbow"] else "ability"
-   var bone=skeleton.find_bone("magazine" if clip=="reload" else "arm_r" if asset=="Rook" else "arm_l")
+   var bone=skeleton.find_bone("magazine" if clip=="reload" else "arm_r" if asset in ["Rook","Lumen"] else "arm_l")
    for key in ap.get_animation_list():
     if key.ends_with(clip) and bone>=0:
      ap.play(key);ap.seek(0,true);ap.advance(0)
@@ -34,8 +41,20 @@ func run() -> void:
      ap.seek(ap.get_animation(key).length*.4,true);ap.advance(0)
      var after=skeleton.get_bone_pose(bone)
      check(not before.is_equal_approx(after),asset+" actual animated bone movement")
-  check(all_nodes(model,"MeshInstance3D").size()>12,asset+" detailed multipart model")
+  var meshes=all_nodes(model,"MeshInstance3D")
+  check(meshes.size()>=4,asset+" imported material groups")
+  var vertices=0
+  for mesh in meshes:
+   for i in mesh.mesh.get_surface_count():vertices+=mesh.mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX].size()
+  check(vertices>500,asset+" authored geometry")
   model.queue_free()
+ for asset in ["Kestrel","Wisp","Longbow"]:
+  var world=load("res://assets/"+asset+"World.glb").instantiate();root.add_child(world)
+  var meshes=all_nodes(world,"MeshInstance3D")
+  check(meshes.size()<=8 and meshes.size()>0,asset+" optimized world material groups")
+  for mesh in meshes:
+   check(not ("palm" in mesh.name or "sleeve" in mesh.name or "finger" in mesh.name),asset+" world model excludes viewmodel hands")
+  world.queue_free()
  var arena_script=load("res://scripts/arena.gd")
  for index in 4:
   var arena=arena_script.new();root.add_child(arena);arena.build(index)
@@ -88,7 +107,19 @@ func run() -> void:
  game.player.hp=40;game.skill_cd=0;game.agents=0;game._skill();check(game.player.hp==75,"Serein restores health")
  game.agents=1;game.skill_cd=0;game._skill();check(game.shield_time==5,"Rook protection")
  game.agents=2;game.skill_cd=0;game._skill();check(game.player.velocity.length()>10,"Vesper dash")
- game.mode_box.select(1);game.start_match();check(game.enemies.size()==2 and game.wave==1,"Wave mode starts correctly")
+ game.agents=3;game.skill_cd=0;game._skill();check(game.radar_time==5,"Lumen reveal duration")
+ for bot in game.enemies:
+  check(bot.animation_tree!=null and bot.animation_tree.active,"Layered locomotion tree")
+  check(not all_nodes(bot,"BoneAttachment3D").is_empty(),"World weapon socket follows hand")
+ var animated_bot=game.enemies[0];var rig=animated_bot._skeleton(animated_bot.visual)
+ animated_bot.animation_tree.callback_mode_process=AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+ animated_bot.play_clip("reload",false);animated_bot.animation_tree.set("parameters/action_mix/blend_amount",1.0)
+ animated_bot.animation_tree.set("parameters/locomotion/blend_position",Vector2(0,-1))
+ animated_bot.animation_tree.advance(.04);rig.force_update_all_bone_transforms();var leg_before=rig.get_bone_pose(rig.find_bone("leg_l"))
+ animated_bot.animation_tree.advance(.12);rig.force_update_all_bone_transforms();var leg_after=rig.get_bone_pose(rig.find_bone("leg_l"))
+ check(not leg_before.is_equal_approx(leg_after),"Leg locomotion remains active during upper-body reload")
+ game.pending_respawns.append(.1)
+ game.mode_box.select(1);game.start_match();check(game.pending_respawns.is_empty(),"New match clears pending respawns");check(game.enemies.size()==2 and game.wave==1,"Wave mode starts correctly")
  game.mode_box.select(2);game.start_match();check(game.enemies.size()==5,"Training mode bots")
  game.mode_box.select(3);game.map_box.select(2);game.start_match()
  check(game.mode==3 and game.tactical.phase=="buy" and game.enemies.size()==4,"Tactical match and four defenders")
@@ -106,6 +137,13 @@ func run() -> void:
  game._skill();check(game.skill_cd==0,"Cannot use skill while planting")
  game.tactical.plant_progress=0;game.gun=2;game.resume()
  check(game.gun==game.equipped_index,"Paused menu cannot equip unpurchased gun")
- game.paused=true;var t=game.clock;await physics_frame;check(game.clock==t,"Pause freezes gameplay clock")
+ game.paused=true;game.pending_respawns.append(.3);var t=game.clock;await physics_frame;check(game.clock==t,"Pause freezes gameplay clock");check(game.pending_respawns[0]==.3,"Pause preserves respawn delay")
+ game._layout_ui();check(game.ammo_label.position.x>900,"HUD ammo anchored to right");check(game.ammo_label.get_global_rect().end.y<=game.get_viewport().get_visible_rect().end.y,"Two-line ammo HUD fits vertically")
+ game.left_handed=true;game.reduce_motion=true;game.master_volume=.35;game.cross_color=2;game._save()
+ var config=ConfigFile.new();config.load("user://aurora.cfg")
+ check(config.get_value("controls","left_handed",false),"Handedness persists")
+ check(config.get_value("accessibility","reduce_motion",false),"Reduced motion persists")
+ check(config.get_value("audio","volume",1)==.35,"Audio persists")
+ game._reset_settings();check(not game.left_handed and game.cross_color==0,"Restore defaults")
  print("AURORA_TESTS: %d checks, %d failures" % [checks,failed.size()])
  game.queue_free();await create_timer(.3).timeout;quit(0 if failed.is_empty() else 1)
